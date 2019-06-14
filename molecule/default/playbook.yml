@@ -1,7 +1,60 @@
 ---
 
-- name: Converge
-  hosts: all
+- name: Test VPC Additional Block role
+  hosts: localhost
+
+  environment:
+    EC2_URL: http://localhost:4581
 
   roles:
-    - role: ROLE_NAME
+    - role: sansible.aws_vpc
+      sansible_aws_vpc_cidr: 10.0.0.0/21
+      sansible_aws_vpc_cidr_subnet_private_a: 10.1.0.0/24
+      sansible_aws_vpc_cidr_subnet_private_b: 10.1.1.0/24
+      sansible_aws_vpc_cidr_subnet_private_c: 10.1.2.0/24
+      sansible_aws_vpc_cidr_subnet_public_a: 10.1.3.0/24
+      sansible_aws_vpc_cidr_subnet_public_b: 10.1.4.0/24
+      sansible_aws_vpc_cidr_subnet_public_c: 10.1.5.0/24
+      sansible_aws_vpc_region: eu-west-1
+      sansible_aws_vpc_stack_name: dev-vpc
+      sansible_aws_vpc_tags:
+        Name: dev_vpc
+
+    - role: aws_vpc_additional_block
+      aws_vpc_additional_block_cidr: 10.100.0.0/21
+      aws_vpc_additional_block_cidr_subnet_private_a: 10.100.0.0/24
+      aws_vpc_additional_block_region: eu-west-1
+      aws_vpc_additional_block_stack_name: dev-vpc-additional-block-a
+      aws_vpc_additional_block_tags:
+        Name: dev_vpc_additional_block_a
+      aws_vpc_additional_block_vpc_id: "{{ sansible_aws_vpc_output.dev_vpc.stack_outputs.VpcID }}"
+
+    - role: aws_vpc_additional_block
+      aws_vpc_additional_block_cidr: 10.101.0.0/21
+      aws_vpc_additional_block_cidr_subnet_private_a: 10.101.0.0/24
+      aws_vpc_additional_block_cidr_subnet_private_b: 10.101.1.0/24
+      aws_vpc_additional_block_cidr_subnet_public_a: 10.101.3.0/24
+      aws_vpc_additional_block_cidr_subnet_public_b: 10.101.4.0/24
+      aws_vpc_additional_block_internet_gateway_id: "{{ sansible_aws_vpc_output.dev_vpc.stack_outputs.InternetGateway }}"
+      aws_vpc_additional_block_region: eu-west-1
+      aws_vpc_additional_block_stack_name: dev-vpc-additional-block-b
+      aws_vpc_additional_block_tags:
+        Name: dev_vpc_additional_block_b
+      aws_vpc_additional_block_vpc_id: "{{ sansible_aws_vpc_output.dev_vpc.stack_outputs.VpcID }}"
+
+  post_tasks:
+    - name: Check output data
+      assert:
+        that:
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_a.stack_outputs.SubnetPrivateA != "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_a.stack_outputs.SubnetPrivateB == "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_a.stack_outputs.SubnetPrivateC == "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_a.stack_outputs.SubnetPublicA == "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_a.stack_outputs.SubnetPublicB == "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_a.stack_outputs.SubnetPublicC == "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_b.stack_outputs.SubnetPrivateA != "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_b.stack_outputs.SubnetPrivateB != "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_b.stack_outputs.SubnetPrivateC == "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_b.stack_outputs.SubnetPublicA != "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_b.stack_outputs.SubnetPublicB != "None"
+          - aws_vpc_additional_block_output.dev_vpc_additional_block_b.stack_outputs.SubnetPublicC == "None"

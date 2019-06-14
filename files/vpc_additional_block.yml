@@ -1,0 +1,423 @@
+---
+
+Description: Additional VPC CIDR with Subnets
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Cidr:
+    Description: VPC Cidr Block
+    Type: String
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3}).(\\d{1,3}).(\\d{1,3})\\/(\\d{1,2})"
+    ConstraintDescription: Full Cidr block with mask bits
+  CidrPrivateSubnetA:
+    Description: CIDR of Private Subnet A
+    Type: String
+  CidrPrivateSubnetB:
+    Default: ""
+    Description: CIDR of Private Subnet B
+    Type: String
+  CidrPrivateSubnetC:
+    Default: ""
+    Description: CIDR of Private Subnet C
+    Type: String
+  CidrPublicSubnetA:
+    Default: ""
+    Description: CIDR of Public Subnet A
+    Type: String
+  CidrPublicSubnetB:
+    Default: ""
+    Description: CIDR of Public Subnet B
+    Type: String
+  CidrPublicSubnetC:
+    Default: ""
+    Description: CIDR of Public Subnet C
+    Type: String
+  InternetGatewayID:
+    Default: ""
+    Description: ID of the Internet Gateway if needed
+    Type: String
+  Name:
+    Description: Name of VPC
+    Type: String
+  Region:
+    Description: Region
+    Type: String
+  VpcID:
+    Description: ID of the VPC to attach the new block to
+    Type: AWS::EC2::VPC::Id
+
+Conditions:
+  InternetGateway:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: InternetGatewayID
+  PrivateSecondZone:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: CidrPrivateSubnetB
+  PrivateThirdZone:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: CidrPrivateSubnetC
+  PublicFirstZone:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: CidrPublicSubnetA
+  PublicSecondZone:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: CidrPublicSubnetB
+  PublicThirdZone:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: CidrPublicSubnetC
+
+Resources:
+
+  InternetRoute:
+    Condition: InternetGateway
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: RouteTablePublic
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGatewayID
+
+  RouteTablePrivateA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_private_a"
+      VpcId:
+        Ref: VpcID
+
+  RouteTablePrivateB:
+    Condition: PrivateSecondZone
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_private_b"
+      VpcId:
+        Ref: VpcID
+
+  RouteTablePrivateC:
+    Condition: PrivateThirdZone
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_private_c"
+      VpcId:
+        Ref: VpcID
+
+  RouteTablePublic:
+    Condition: InternetGateway
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_public"
+      VpcId:
+        Ref: VpcID
+
+  SubnetPrivateA:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcAdditionalCIDR
+    Properties:
+      VpcId:
+        Ref: VpcID
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs:
+              Ref: AWS::Region
+      CidrBlock:
+        Ref: CidrPrivateSubnetA
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_private_a"
+
+  SubnetPrivateARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPrivateA
+      RouteTableId:
+        Ref: RouteTablePrivateA
+
+  SubnetPrivateB:
+    Condition: PrivateSecondZone
+    DependsOn: VpcAdditionalCIDR
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VpcID
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs:
+              Ref: AWS::Region
+      CidrBlock:
+        Ref: CidrPrivateSubnetB
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "${Name}_private_b"
+
+  SubnetPrivateBRouteTableAssociation:
+    Condition: PrivateSecondZone
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPrivateB
+      RouteTableId:
+        Ref: RouteTablePrivateB
+
+  SubnetPrivateC:
+    Condition: PrivateThirdZone
+    DependsOn: VpcAdditionalCIDR
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VpcID
+      AvailabilityZone:
+        Fn::Select:
+          - 2
+          - Fn::GetAZs:
+              Ref: AWS::Region
+      CidrBlock:
+        Ref: CidrPrivateSubnetC
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_private_c"
+
+  SubnetPrivateCRouteTableAssociation:
+    Condition: PrivateThirdZone
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPrivateC
+      RouteTableId:
+        Ref: RouteTablePrivateC
+
+  SubnetPublicA:
+    Condition: PublicFirstZone
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcAdditionalCIDR
+    Properties:
+      VpcId:
+        Ref: VpcID
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs:
+              Ref: AWS::Region
+      CidrBlock:
+        Ref: CidrPublicSubnetA
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_public_a"
+
+  SubnetPublicARouteTableAssociation:
+    Condition: PublicFirstZone
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPublicA
+      RouteTableId:
+        Ref: RouteTablePublic
+
+  SubnetPublicB:
+    Condition: PublicSecondZone
+    DependsOn: VpcAdditionalCIDR
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VpcID
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs:
+              Ref: AWS::Region
+      CidrBlock:
+        Ref: CidrPublicSubnetB
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_public_b"
+
+  SubnetPublicBRouteTableAssociation:
+    Condition: PublicSecondZone
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPublicB
+      RouteTableId:
+        Ref: RouteTablePublic
+
+  SubnetPublicC:
+    Condition: PublicThirdZone
+    DependsOn: VpcAdditionalCIDR
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VpcID
+      AvailabilityZone:
+        Fn::Select:
+          - 2
+          - Fn::GetAZs:
+              Ref: AWS::Region
+      CidrBlock:
+        Ref: CidrPublicSubnetC
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${Name}_public_c"
+
+  SubnetPublicCRouteTableAssociation:
+    Condition: PublicThirdZone
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPublicC
+      RouteTableId:
+        Ref: RouteTablePublic
+
+  VpcAdditionalCIDR:
+    Type: AWS::EC2::VPCCidrBlock
+    Properties:
+      CidrBlock:
+        Ref: Cidr
+      VpcId:
+        Ref: VpcID
+
+Outputs:
+  Cidr:
+    Description: The additionl Cidr for the VPC
+    Value:
+      Ref: Cidr
+
+  InternetGateway:
+    Condition: InternetGateway
+    Description: ID the Internet Gateway
+    Value:
+      Ref: InternetGatewayID
+
+  RouteTablePrivateA:
+    Description: ID of the Private Route Table A
+    Value:
+      Ref: RouteTablePrivateA
+
+  RouteTablePrivateB:
+    Condition: PrivateSecondZone
+    Description: ID of the Private Route Table B
+    Value:
+      Ref: RouteTablePrivateB
+
+  RouteTablePrivateC:
+    Condition: PrivateThirdZone
+    Description: ID of the Private Route Table C
+    Value:
+      Ref: RouteTablePrivateC
+
+  RouteTablesPrivate:
+    Description: IDs of the Private RT
+    Value:
+      Fn::If:
+        - PrivateThirdZone
+        - Fn::Sub: "${RouteTablePrivateA},${RouteTablePrivateB},${RouteTablePrivateC}"
+        - Fn::If:
+          - PrivateSecondZone
+          - Fn::Sub: "${RouteTablePrivateA},${RouteTablePrivateB}"
+          - Fn::Sub: "${RouteTablePrivateA}"
+
+  RouteTablePublic:
+    Condition: InternetGateway
+    Description: ID of the Public RT
+    Value:
+      Ref: RouteTablePublic
+
+  SubnetPrivateA:
+    Description: ID of the Private Subnet A
+    Value:
+      Ref: SubnetPrivateA
+
+  SubnetPrivateB:
+    Condition: PrivateSecondZone
+    Description: ID of the Private Subnet B
+    Value:
+      Ref: SubnetPrivateB
+
+  SubnetPrivateC:
+    Condition: PrivateThirdZone
+    Description: ID of the Private Subnet C
+    Value:
+      Ref: SubnetPrivateC
+
+  SubnetPublicA:
+    Condition: PublicFirstZone
+    Description: ID of the Public Subnet A
+    Value:
+      Ref: SubnetPublicA
+
+  SubnetPublicB:
+    Condition: PublicSecondZone
+    Description: ID of the Public Subnet B
+    Value:
+      Ref: SubnetPublicB
+
+  SubnetPublicC:
+    Condition: PublicThirdZone
+    Description: ID of the Public Subnet C
+    Value:
+      Ref: SubnetPublicC
+
+  SubnetsPrivate:
+    Description: IDs of the Private Subnets
+    Value:
+      Fn::If:
+        - PrivateThirdZone
+        - Fn::Sub: "${SubnetPrivateA},${SubnetPrivateB},${SubnetPrivateC}"
+        - Fn::If:
+          - PrivateSecondZone
+          - Fn::Sub: "${SubnetPrivateA},${SubnetPrivateB}"
+          - Fn::Sub: "${SubnetPrivateA}"
+
+  SubnetsPublic:
+    Description: IDs of the Public Subnets
+    Value:
+      Fn::If:
+        - PublicThirdZone
+        - Fn::Sub: "${SubnetPublicA},${SubnetPublicB},${SubnetPublicC}"
+        - Fn::If:
+          - PublicSecondZone
+          - Fn::Sub: "${SubnetPublicA},${SubnetPublicB}"
+          - Fn::If:
+            - PublicFirstZone
+            - Fn::Sub: "${SubnetPublicA}"
+            - ""
+
+  VpcID:
+    Description: ID of the VPC
+    Value:
+      Ref: VpcID

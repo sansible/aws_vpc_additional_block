@@ -2,27 +2,25 @@
 
 # For supported options, see https://galaxy.ansible.com/intro#meta
 
+allow_duplicates: yes
+
 galaxy_info:
-  author: ~
-  description: ~
-  # company: optional
-
+  author: Sansible
+  description: Deploys an additional CIDR block with subnets for a VPC
   license: MIT
-
-  # SAnsible only supports Ansible 2.6+
   min_ansible_version: 2.6
   min_ansible_container_version: 2.6
 
-  # All platforms supported by the role.  Ensure you test all in this list!
   platforms:
     - name: Ubuntu
       versions:
         - xenial
         - bionic
 
-  # List of tags for your role to enable users to find it easily on Ansible Galaxy.
-  # See https://galaxy.ansible.com/explore#/ for inspiration.
-  galaxy_tags: []
+  galaxy_tags:
+    - aws
+    - cloud
+    - network
+    - networking
 
-# List of Ansible Galaxy roles on which your role depends on.
 dependencies: []

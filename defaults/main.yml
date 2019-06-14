@@ -1,1 +1,14 @@
 ---
+
+aws_vpc_additional_block_cidr: ~
+aws_vpc_additional_block_cidr_subnet_private_a: ~
+aws_vpc_additional_block_cidr_subnet_private_b: ~
+aws_vpc_additional_block_cidr_subnet_private_c: ~
+aws_vpc_additional_block_cidr_subnet_public_a: ~
+aws_vpc_additional_block_cidr_subnet_public_b: ~
+aws_vpc_additional_block_cidr_subnet_public_c: ~
+aws_vpc_additional_block_internet_gateway_id: ~
+aws_vpc_additional_block_region: ~
+aws_vpc_additional_block_stack_name: ~
+aws_vpc_additional_block_tags: ~
+aws_vpc_additional_block_vpc_id: ~
