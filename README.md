@@ -7,8 +7,8 @@ Develop: [![Build Status](https://travis-ci.org/sansible/aws_vpc_additional_bloc
 * [Role Variables](#role-variables)
 * [Examples](#examples)
 
-This role provisions an extra CIDR block for VPC along with public and private
-subnets as needed.
+This role provisions an extra CIDR block for VPC along with subnets, route 
+tables and an IGW as needed.
 
 
 ## Installation and Dependencies
@@ -35,7 +35,7 @@ and run `ansible-galaxy install -p ./roles -r roles.yml`
 |aws_vpc_additional_block_cidr_subnet_public_a|~|Optional CIDR for public subnet a|
 |aws_vpc_additional_block_cidr_subnet_public_b|~|Optional CIDR for public subnet b|
 |aws_vpc_additional_block_cidr_subnet_public_c|~|Optional CIDR for public subnet c|
-|aws_vpc_additional_block_internet_gateway_id|~|Internet Gateway ID for public subnets, required if public subnets are specified|
+|aws_vpc_additional_block_internet_gateway_id|~|Internet Gateway ID for public subnets, required if parent VPC has an IGW, if not an IGW will be created if public subnets are specified|
 |aws_vpc_additional_block_region|~|AWS region for VPC|
 |aws_vpc_additional_block_stack_name|~|Name for VPC CF stack|
 |aws_vpc_additional_block_tags|~|Tags for the VPC, you must specify a Name tag|
@@ -70,6 +70,22 @@ Simply include role in your playbook
       aws_vpc_additional_block_cidr_subnet_public_a: 10.101.3.0/24
       aws_vpc_additional_block_cidr_subnet_public_b: 10.101.4.0/24
       aws_vpc_additional_block_internet_gateway_id: igw-123456
+      aws_vpc_additional_block_region: eu-west-1
+      aws_vpc_additional_block_stack_name: dev-vpc-additional-block
+      aws_vpc_additional_block_tags:
+        Name: dev_vpc_additional_block
+      aws_vpc_additional_block_vpc_id: vpc-123456
+```
+
+```YAML
+- name: Install and Configure additional CIDR and create an IGW (VPC must not have one aleady)
+  hosts: somehost
+    - role: aws_vpc_additional_block
+      aws_vpc_additional_block_cidr: 10.102.0.0/21
+      aws_vpc_additional_block_cidr_subnet_private_a: 10.102.0.0/24
+      aws_vpc_additional_block_cidr_subnet_private_b: 10.102.1.0/24
+      aws_vpc_additional_block_cidr_subnet_public_a: 10.102.3.0/24
+      aws_vpc_additional_block_cidr_subnet_public_b: 10.102.4.0/24
       aws_vpc_additional_block_region: eu-west-1
       aws_vpc_additional_block_stack_name: dev-vpc-additional-block
       aws_vpc_additional_block_tags:

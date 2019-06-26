@@ -47,7 +47,16 @@ Parameters:
     Type: AWS::EC2::VPC::Id
 
 Conditions:
-  InternetGateway:
+  InternetGatewayCreateNew:
+    Fn::And:
+      - Fn::Not:
+        - Fn::Equals:
+          - ""
+          - Ref: CidrPublicSubnetA
+      - Fn::Equals:
+        - ""
+        - Ref: InternetGatewayID
+  InternetGatewayUseExisting:
     Fn::Not:
       - Fn::Equals:
         - ""
@@ -80,15 +89,31 @@ Conditions:
 
 Resources:
 
+  AttachGateway:
+    Condition: InternetGatewayCreateNew
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VpcID
+      InternetGatewayId:
+        Ref: InternetGateway
+
+  InternetGateway:
+    Condition: InternetGatewayCreateNew
+    Type: AWS::EC2::InternetGateway
+
   InternetRoute:
-    Condition: InternetGateway
+    Condition: PublicFirstZone
     Type: AWS::EC2::Route
     Properties:
       RouteTableId:
         Ref: RouteTablePublic
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId:
-        Ref: InternetGatewayID
+        Fn::If:
+          - InternetGatewayCreateNew
+          - Ref: InternetGateway
+          - Ref: InternetGatewayID
 
   RouteTablePrivateA:
     Type: AWS::EC2::RouteTable
@@ -123,7 +148,7 @@ Resources:
         Ref: VpcID
 
   RouteTablePublic:
-    Condition: InternetGateway
+    Condition: PublicFirstZone
     Type: AWS::EC2::RouteTable
     Properties:
       Tags:
@@ -318,10 +343,13 @@ Outputs:
       Ref: Cidr
 
   InternetGateway:
-    Condition: InternetGateway
+    Condition: PublicFirstZone
     Description: ID the Internet Gateway
     Value:
-      Ref: InternetGatewayID
+      Fn::If:
+        - InternetGatewayCreateNew
+        - Ref: InternetGateway
+        - Ref: InternetGatewayID
 
   RouteTablePrivateA:
     Description: ID of the Private Route Table A
@@ -352,7 +380,7 @@ Outputs:
           - Fn::Sub: "${RouteTablePrivateA}"
 
   RouteTablePublic:
-    Condition: InternetGateway
+    Condition: PublicFirstZone
     Description: ID of the Public RT
     Value:
       Ref: RouteTablePublic
